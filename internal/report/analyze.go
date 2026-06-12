@@ -204,7 +204,7 @@ func buildAdvice(s *Summary) []Advice {
 	}
 
 	if spoofMsgs > 0 {
-		text := fmt.Sprintf("%d message(s) from %d source(s) had no valid authentication — likely spoofing of %s.",
+		text := fmt.Sprintf("%d message(s) from %d source(s) had no valid authentication - likely spoofing of %s.",
 			spoofMsgs, spoofSrcs, strings.Join(s.Domains, ", "))
 		for _, domain := range s.Domains {
 			if s.Policies[domain] == "none" {

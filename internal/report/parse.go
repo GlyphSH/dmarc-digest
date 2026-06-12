@@ -11,7 +11,7 @@ import (
 )
 
 // ParseFile reads a DMARC aggregate report from a plain .xml file, a .xml.gz
-// file, or a .zip archive containing an .xml entry — the three forms reporting
+// file, or a .zip archive containing an .xml entry - the three forms reporting
 // orgs actually send.
 func ParseFile(path string) (*Feedback, error) {
 	switch {

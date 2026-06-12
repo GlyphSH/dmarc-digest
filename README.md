@@ -8,7 +8,7 @@ Turn unreadable DMARC aggregate (RUA) XML reports into a digest a human can act 
 **who sends as your domain, who is spoofing it, and what to fix.**
 
 Mailbox providers email these reports to the `rua=` address in your DMARC record as
-`.xml`, `.xml.gz`, or `.zip` attachments. Almost nobody reads them — which means almost
+`.xml`, `.xml.gz`, or `.zip` attachments. Almost nobody reads them - which means almost
 nobody notices spoofing attempts or misconfigured senders. `dmarc-digest` reads them
 for you. Zero dependencies, single static binary.
 
@@ -26,7 +26,7 @@ SOURCE         PTR                      MSGS  SPF   DKIM  DMARC  VERDICT
 40.92.18.21    ...outlook.com           13    pass  pass  pass   ok
 
 WHAT TO DO
- ✗ 37 message(s) from 1 source(s) had no valid authentication — likely spoofing of
+ ✗ 37 message(s) from 1 source(s) had no valid authentication - likely spoofing of
    example.com. example.com publishes p=none, so receivers delivered these anyway;
    consider p=quarantine.
  ⚠ 52 message(s) authenticate but are not aligned (passes SPF for sendgrid.net, DKIM
@@ -41,7 +41,7 @@ WHAT TO DO
 go install github.com/GlyphSH/dmarc-digest@latest
 ```
 
-Or clone and `go build` — there are no dependencies beyond the Go standard library.
+Or clone and `go build` - there are no dependencies beyond the Go standard library.
 
 ## Usage
 
@@ -70,13 +70,13 @@ non-zero exit is all most domains need.
 
 ## How verdicts work
 
-DMARC's `policy_evaluated` results are *alignment* results — SPF/DKIM must pass
+DMARC's `policy_evaluated` results are *alignment* results - SPF/DKIM must pass
 **and** match the From: domain. `dmarc-digest` uses the raw `auth_results` to
 separate two very different failure modes:
 
-- **third-party** — SPF or DKIM passes, but for another domain (e.g. `sendgrid.net`).
+- **third-party** - SPF or DKIM passes, but for another domain (e.g. `sendgrid.net`).
   Usually a legit SaaS sender that needs a custom return-path / DKIM CNAMEs.
-- **suspected-spoofing** — nothing valid at all. Someone else is sending as you.
+- **suspected-spoofing** - nothing valid at all. Someone else is sending as you.
 
 ## Development
 
