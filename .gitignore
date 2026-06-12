@@ -1,0 +1,3 @@
+/dmarc-digest
+dist/
+*.test
