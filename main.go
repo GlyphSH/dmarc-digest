@@ -122,8 +122,12 @@ func resolvePTRs(s *report.Summary) {
 }
 
 func writeHuman(w io.Writer, s *report.Summary) {
-	fmt.Fprintf(w, "%d report(s) · %s · %s → %s · %d messages\n\n",
-		s.Reports, strings.Join(s.Domains, ", "),
+	dup := ""
+	if s.Duplicates > 0 {
+		dup = fmt.Sprintf(" (%d duplicate(s) skipped)", s.Duplicates)
+	}
+	fmt.Fprintf(w, "%d report(s)%s · %s · %s → %s · %d messages\n\n",
+		s.Reports, dup, strings.Join(s.Domains, ", "),
 		s.Begin.Format("2006-01-02"), s.End.Format("2006-01-02"), s.Messages)
 
 	tw := tabwriter.NewWriter(w, 2, 4, 2, ' ', 0)

@@ -55,14 +55,16 @@ dmarc-digest [flags] <report.xml | report.xml.gz | report.zip | dir> ...
 
 Pass any mix of files and directories; a directory is scanned for `.xml`,
 `.xml.gz`, and `.zip` reports. Reports from multiple providers and days are
-merged into one digest per run.
+merged into one digest per run. The same report seen twice (saved twice, or
+re-sent by the provider) is counted once; the header says how many duplicates
+were skipped.
 
 ### Exit codes (CI / cron friendly)
 
 | Code | Meaning |
 |------|---------|
 | 0    | every source fully authenticated |
-| 1    | alignment problems only (likely misconfigured legit senders) |
+| 1    | alignment or own-DKIM problems only (likely misconfigured legit senders) |
 | 2    | suspected spoofing seen, or a report failed to parse |
 
 A nightly cron like `dmarc-digest /var/dmarc/today/ -json | jq` plus an alert on
@@ -76,6 +78,11 @@ separate two very different failure modes:
 
 - **third-party** - SPF or DKIM passes, but for another domain (e.g. `sendgrid.net`).
   Usually a legit SaaS sender that needs a custom return-path / DKIM CNAMEs.
+- **own-dkim-failed** - nothing passes, but the message carried a DKIM signature
+  for your own domain (a selector is named) and it failed. Spoofers rarely sign as
+  the domain they forge, so this is almost always one of your own senders whose
+  DKIM record is missing or stale. The digest names the exact DNS record to check,
+  e.g. `sig1._domainkey.example.com` for a forgotten iCloud custom-domain setup.
 - **suspected-spoofing** - nothing valid at all. Someone else is sending as you.
 
 ## Development

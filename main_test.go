@@ -78,3 +78,27 @@ func TestRunVersion(t *testing.T) {
 		t.Errorf("version output = %q", out.String())
 	}
 }
+
+func TestRunDuplicates(t *testing.T) {
+	var out, errOut bytes.Buffer
+	code := run([]string{"-no-dns", testdata("outlook.xml"), testdata("outlook.zip")}, &out, &errOut)
+	if code != 0 {
+		t.Errorf("exit = %d, want 0; stderr: %s", code, errOut.String())
+	}
+	if !strings.Contains(out.String(), "1 report(s) (1 duplicate(s) skipped)") {
+		t.Errorf("output missing duplicate notice:\n%s", out.String())
+	}
+}
+
+func TestRunOwnDKIM(t *testing.T) {
+	var out, errOut bytes.Buffer
+	code := run([]string{"-no-dns", testdata("icloud.xml")}, &out, &errOut)
+	if code != 1 {
+		t.Errorf("exit = %d, want 1; stderr: %s", code, errOut.String())
+	}
+	for _, want := range []string{"own-dkim-failed", "sig1._domainkey.example.com"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("output missing %q:\n%s", want, out.String())
+		}
+	}
+}

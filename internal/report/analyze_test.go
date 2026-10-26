@@ -150,3 +150,79 @@ func TestZeroCountTreatedAsOne(t *testing.T) {
 		t.Errorf("messages = %d, want 1 (zero count defaults to 1)", s.Messages)
 	}
 }
+
+func TestDuplicateReportsCountedOnce(t *testing.T) {
+	once := Summarize([]*Feedback{mustParse(t, "google.xml")})
+	twice := Summarize([]*Feedback{mustParse(t, "google.xml"), mustParse(t, "google.xml")})
+	if twice.Reports != 1 || twice.Duplicates != 1 {
+		t.Errorf("reports/duplicates = %d/%d, want 1/1", twice.Reports, twice.Duplicates)
+	}
+	if twice.Messages != once.Messages || twice.Passed != once.Passed {
+		t.Errorf("messages/passed = %d/%d, want %d/%d (duplicate must not inflate counts)",
+			twice.Messages, twice.Passed, once.Messages, once.Passed)
+	}
+	// Same report_id from a different reporter is a different report.
+	other := mustParse(t, "google.xml")
+	other.Metadata.OrgName = "Yahoo"
+	diff := Summarize([]*Feedback{mustParse(t, "google.xml"), other})
+	if diff.Reports != 2 || diff.Duplicates != 0 {
+		t.Errorf("reports/duplicates across reporters = %d/%d, want 2/0", diff.Reports, diff.Duplicates)
+	}
+	// Reports without a report_id can never be deduplicated.
+	noID := mustParse(t, "google.xml")
+	noID.Metadata.ReportID = ""
+	anon := Summarize([]*Feedback{noID, noID})
+	if anon.Reports != 2 || anon.Duplicates != 0 {
+		t.Errorf("reports/duplicates without report_id = %d/%d, want 2/0", anon.Reports, anon.Duplicates)
+	}
+}
+
+func TestOwnDKIMFailed(t *testing.T) {
+	s := Summarize([]*Feedback{mustParse(t, "icloud.xml")})
+	if len(s.Sources) != 1 {
+		t.Fatalf("sources = %d, want 1", len(s.Sources))
+	}
+	src := s.Sources[0]
+	if src.Verdict != VerdictOwnDKIM {
+		t.Errorf("verdict = %s, want own-dkim-failed", src.Verdict)
+	}
+	if !strings.Contains(src.Note, "sig1._domainkey.example.com") {
+		t.Errorf("note = %q, want the failed DKIM DNS name", src.Note)
+	}
+	if len(src.FailedDKIM) != 1 || src.FailedDKIM[0] != "sig1._domainkey.example.com" {
+		t.Errorf("failed_dkim = %v, want [sig1._domainkey.example.com]", src.FailedDKIM)
+	}
+	if got := s.ExitCode(); got != 1 {
+		t.Errorf("exit = %d, want 1 (misconfigured sender, not spoofing)", got)
+	}
+	var warn string
+	for _, a := range s.Advice {
+		if a.Level == "crit" {
+			t.Errorf("unexpected crit advice: %q", a.Text)
+		}
+		if a.Level == "warn" {
+			warn = a.Text
+		}
+	}
+	if !strings.Contains(warn, "sig1._domainkey.example.com") || !strings.Contains(warn, "missing or stale DKIM record") {
+		t.Errorf("warn advice = %q, want DKIM DNS name + stale-record hint", warn)
+	}
+}
+
+func TestOwnDKIMNeedsSelector(t *testing.T) {
+	// A failed DKIM entry for the From: domain with no selector says nothing
+	// about whether a signature existed, so it must stay suspected-spoofing.
+	fb := mustParse(t, "icloud.xml")
+	fb.Records[0].AuthResults.DKIM[0].Selector = ""
+	s := Summarize([]*Feedback{fb})
+	if v := s.Sources[0].Verdict; v != VerdictSpoof {
+		t.Errorf("verdict without selector = %s, want suspected-spoofing", v)
+	}
+	// A failed signature for some other domain is not "own" either.
+	fb = mustParse(t, "icloud.xml")
+	fb.Records[0].AuthResults.DKIM[0].Domain = "other.example"
+	s = Summarize([]*Feedback{fb})
+	if v := s.Sources[0].Verdict; v != VerdictSpoof {
+		t.Errorf("verdict with foreign failed signature = %s, want suspected-spoofing", v)
+	}
+}
